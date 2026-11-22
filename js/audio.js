@@ -68,34 +68,138 @@ const Sound = (() => {
     break: () => noise(0.3, 0.28),
   };
 
-  // ---------- Müzik: her temaya kendi küçük melodisi ----------
-  const SCALES = [[0, 2, 4, 7, 9], [0, 3, 5, 7, 10], [0, 2, 3, 7, 8]];
+  // ---------- Müzik ----------
+  // Her tema için A-B-A-B biçiminde 32 ölçülük bir şarkı bestelenir (her ölçü 8 sekizlik).
+  // Melodi akor notalarına oturur ve tekrar eden bir motiften gelişir; bas yumuşak, vuruş yok.
+  // progs: akor dizileri (gamın derecesi, 0 = kök). swing: tek sekizlikleri geciktirip sallanan ritim verir.
+  const MUSIC = [
+    { bpm: 112, root: 60, minor: false, progs: [[0, 4, 5, 3], [3, 4, 0, 0]], lead: 'triangle', swing: 0.12 }, // karakter dünyası
+    { bpm: 118, root: 62, minor: false, progs: [[0, 3, 4, 0], [5, 3, 0, 4]], lead: 'triangle', swing: 0.16 }, // orman
+    { bpm: 104, root: 57, minor: true,  progs: [[0, 5, 6, 4], [3, 4, 0, 0]], lead: 'triangle', swing: 0.1 },  // çöl
+    { bpm: 92,  root: 60, minor: false, progs: [[0, 5, 3, 4], [3, 0, 4, 0]], lead: 'sine',     swing: 0 },    // deniz
+    { bpm: 120, root: 57, minor: true,  progs: [[0, 6, 5, 6], [3, 4, 0, 0]], lead: 'triangle', swing: 0 },    // lav
+    { bpm: 100, root: 65, minor: false, progs: [[0, 3, 0, 4], [5, 3, 1, 4]], lead: 'sine',     swing: 0.1 },  // gökyüzü
+    { bpm: 124, root: 60, minor: false, progs: [[0, 5, 1, 4], [3, 4, 2, 5]], lead: 'triangle', swing: 0.18 }, // şehir
+    { bpm: 108, root: 64, minor: false, progs: [[0, 4, 5, 3], [0, 3, 4, 4]], lead: 'sine',     swing: 0 },    // karlı dağ
+    { bpm: 96,  root: 55, minor: true,  progs: [[0, 3, 0, 4], [5, 6, 0, 0]], lead: 'triangle', swing: 0.2 },  // bataklık
+    { bpm: 100, root: 61, minor: true,  progs: [[0, 5, 3, 4], [0, 6, 5, 4]], lead: 'sine',     swing: 0 },    // kristal mağara
+    { bpm: 110, root: 58, minor: false, progs: [[0, 2, 3, 4], [5, 4, 3, 4]], lead: 'sine',     swing: 0 },    // uzay
+  ];
+  const RHYTHMS = [
+    [1, 0, 1, 1, 0, 1, 0, 0], [1, 0, 0, 1, 0, 0, 1, 0], [1, 1, 0, 1, 1, 0, 1, 0],
+    [1, 0, 1, 0, 1, 1, 1, 0], [1, 0, 0, 0, 1, 0, 1, 1], [1, 0, 1, 1, 1, 0, 1, 0],
+  ];
+  const BAR = 8, SECTION = 8 * BAR, SONG = 4 * SECTION;
   let pendingTheme = null;
+
+  const midiHz = (m) => 440 * Math.pow(2, (m - 69) / 12);
+
+  // Yumuşak girişli, sönümlenen bir nota.
+  function note(midi, when, dur, type, vol) {
+    const t0 = Math.max(when, ac.currentTime);
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(midiHz(midi), t0);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.linearRampToValueAtTime(vol, t0 + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    o.connect(g); g.connect(musicBus);
+    o.start(t0); o.stop(t0 + dur + 0.02);
+  }
+
+  let shakerBuf = null;
+  function shaker(when, vol) {
+    if (!shakerBuf) {
+      const len = Math.floor(ac.sampleRate * 0.05);
+      shakerBuf = ac.createBuffer(1, len, ac.sampleRate);
+      const d = shakerBuf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    }
+    const s = ac.createBufferSource(); s.buffer = shakerBuf;
+    const f = ac.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 6000;
+    const g = ac.createGain(); g.gain.value = vol;
+    s.connect(f); f.connect(g); g.connect(musicBus);
+    s.start(Math.max(when, ac.currentTime));
+  }
+
+  function compose(themeIdx) {
+    const cfg = MUSIC[themeIdx] || MUSIC[0];
+    const rnd = mulberry32(themeIdx * 977 + 31);
+    const scale = cfg.minor ? [0, 2, 3, 5, 7, 8, 10] : [0, 2, 4, 5, 7, 9, 11];
+    const degMidi = (d) => cfg.root + 12 * Math.floor(d / 7) + scale[((d % 7) + 7) % 7];
+    const pick = (arr) => arr[Math.floor(rnd() * arr.length)];
+    const nearestChordTone = (cur, chord) => {
+      let best = cur, bestDist = 99;
+      for (let o = -7; o <= 14; o += 7) for (const ct of [chord, chord + 2, chord + 4]) {
+        const d = ct + o, dist = Math.abs(d - cur);
+        if (dist < bestDist) { best = d; bestDist = dist; }
+      }
+      return best;
+    };
+
+    // 8 ölçülük melodi: 4 ölçülük cümle, tekrarında sonu tonik notaya çözülür.
+    function phrase(prog, lo, hi) {
+      const out = new Array(SECTION).fill(null);
+      const rA = pick(RHYTHMS), rB = pick(RHYTHMS);
+      let cur = nearestChordTone(lo + 3, prog[0]);
+      for (let bar = 0; bar < 4; bar++) {
+        const r = bar % 2 ? rB : rA;
+        for (let s = 0; s < BAR; s++) {
+          if (!r[s]) continue;
+          if (s === 0 || s === 4) cur = nearestChordTone(cur, prog[bar]);
+          else cur += pick([-1, 1, 1, 2, -2, 0, -1]);
+          if (cur < lo) cur += 2; if (cur > hi) cur -= 3;
+          out[bar * BAR + s] = cur;
+        }
+      }
+      for (let i = 0; i < 4 * BAR; i++) out[4 * BAR + i] = out[i];
+      const idx = 4 * BAR + Math.floor(rnd() * 3 * BAR);          // tekrarında küçük bir değişiklik
+      if (out[idx] !== null) out[idx] += pick([1, 2, -1]);
+      for (let s = 1; s < BAR; s++) out[7 * BAR + s] = null;    // son ölçü: köke otur ve bekle
+      out[7 * BAR] = nearestChordTone(out[6 * BAR] ?? lo + 3, 0);
+      return out;
+    }
+
+    const melA = phrase(cfg.progs[0], 4, 12);
+    const melB = phrase(cfg.progs[1], 6, 14);
+    const sections = [[melA, cfg.progs[0]], [melB, cfg.progs[1]], [melA, cfg.progs[0]], [melB.map((d) => (d === null ? null : d + 2)), cfg.progs[1]]];
+    const lead = [], bass = [], arp = [];
+    for (const [mel, prog] of sections) {
+      for (let i = 0; i < SECTION; i++) {
+        const bar = Math.floor(i / BAR) % 4, s = i % BAR, chord = prog[bar];
+        let len = 0;
+        if (mel[i] !== null) { len = 1; while (len < 4 && i + len < SECTION && mel[i + len] === null) len++; }
+        lead.push(mel[i] === null ? null : { m: degMidi(mel[i]), len });
+        const root = degMidi(chord) - 24, fifth = degMidi(chord + 4) - 24;
+        bass.push(s === 0 ? { m: root, len: 3 } : s === 4 ? { m: fifth, len: 2 } : s === 6 ? { m: root + 12, len: 1 } : null);
+        const arpDeg = [chord + 7, chord + 9, chord + 11, chord + 9][(s >> 1) & 3];
+        arp.push(s % 2 === 1 ? degMidi(arpDeg) : null);
+      }
+    }
+    return { cfg, lead, bass, arp };
+  }
 
   function startMusic(themeIdx) {
     stopMusic();
     pendingTheme = themeIdx;
     if (!ac) return;
-    const rnd = mulberry32(themeIdx * 31 + 7);
-    const root = 196 * Math.pow(2, ((themeIdx * 5) % 12) / 12);
-    const scale = SCALES[themeIdx % 3];
-    const bpm = [116, 120, 104, 110, 96, 112, 100, 128, 92, 90, 108][themeIdx] || 110;
-    const steps = 32;
-    const mel = [];
-    for (let i = 0; i < steps; i++) mel.push(rnd() < 0.6 ? scale[Math.floor(rnd() * 5)] + (rnd() < 0.3 ? 12 : 0) : null);
-    const bass = [0, 0, 7, 5];
-    const stepDur = 60 / bpm / 2;
+    const song = compose(themeIdx);
+    const stepDur = 60 / song.cfg.bpm / 2;
     let step = 0, next = ac.currentTime + 0.1;
     seqTimer = setInterval(() => {
       if (next < ac.currentTime - 0.3) next = ac.currentTime + 0.05;
       while (next < ac.currentTime + 0.25) {
-        const m = mel[step % steps];
-        const delay = next - ac.currentTime;
-        if (m !== null) tone(root * 2 * Math.pow(2, m / 12), stepDur * 0.9, 'triangle', 0.22, 0, delay, musicBus);
-        if (step % 2 === 0) {
-          const b = bass[Math.floor(step / 8) % 4];
-          tone((root / 2) * Math.pow(2, b / 12), stepDur * 1.6, 'square', 0.12, 0, delay, musicBus);
+        const i = step % SONG;
+        const t = next + (i % 2 ? song.cfg.swing * stepDur : 0);
+        const L = song.lead[i];
+        if (L) {
+          note(L.m, t, L.len * stepDur * 0.95 + 0.05, song.cfg.lead, 0.2);
+          note(L.m + 12, t, L.len * stepDur * 0.6 + 0.05, 'sine', 0.05);
         }
+        const B = song.bass[i];
+        if (B) note(B.m, t, B.len * stepDur * 0.9, 'triangle', 0.22);
+        if (song.arp[i] !== null) note(song.arp[i], t, 0.14, 'sine', 0.05);
+        if (i % 4 === 2) shaker(t, 0.035);
         step++;
         next += stepDur;
       }

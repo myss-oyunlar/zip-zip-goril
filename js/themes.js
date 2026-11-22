@@ -60,13 +60,13 @@ const THEMES = [
   { name: 'Orman', icon: '🌳', sky: ['#45a8ff', '#d2f2ff'], ground: '#7b4b26', dark: '#5c381b', top: '#43b23a', topHi: '#7fdc5c',
     tile: 'dirt', plat: 'wood', bg: 'forest', power: 'climb',
     walker: { style: 'beetle', color: '#d8352a', color2: '#2b1a12' }, flyer: { style: 'bee', color: '#ffd21f', color2: '#2b2b2b' },
-    seg: { flat: 3, step: 2, gap: 2, plats: 1, spikes: 0.5, pond: 1, vine: 1.6, spring: 0.7, cracked: 0.4 },
+    seg: { flat: 3, step: 2, gap: 2, plats: 1, spikes: 0.5, pond: 1, vine: 1.6, spring: 0.7 },
     spike: '#a7a7a7', water: 'rgba(40,150,255,0.45)', mapDeco: ['🌳', '🌲', '🍄'] },
 
   { name: 'Çöl', icon: '🌵', sky: ['#ffb347', '#fff1c1'], ground: '#d9a45b', dark: '#b8843f', top: '#f3cf7a', topHi: '#fff0b0',
     tile: 'dirt', plat: 'wood', bg: 'desert', power: 'dash',
     walker: { style: 'scorpion', color: '#a0522d', color2: '#5a2a12' }, flyer: { style: 'vulture', color: '#6b4a2e', color2: '#e8d2b0' },
-    seg: { flat: 3, step: 2, gap: 2.5, plats: 1, spikes: 1.5, pond: 0.25, spring: 0.5, cracked: 0.8, mplat: 0.6 },
+    seg: { flat: 3, step: 2, gap: 2.5, plats: 1, spikes: 1.5, pond: 0.25, spring: 0.5, mplat: 0.6 },
     spike: '#3f9b3a', water: 'rgba(40,190,220,0.5)', mapDeco: ['🌵', '🐪', '🏜️'] },
 
   { name: 'Deniz', icon: '🌊', sky: ['#0b4f8a', '#2aa7d8'], ground: '#c9a86a', dark: '#9c7f48', top: '#ff7f8a', topHi: '#ffb0b8',

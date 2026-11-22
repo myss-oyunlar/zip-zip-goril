@@ -212,7 +212,7 @@ function genUnderwater(L, rng, R, ch, put, banana, walker, flyer, floater) {
 
 // Tema 0: karakter seçme odası. Seçilen hayvan suda yaşıyorsa oda suyla dolar.
 function makeHub() {
-  const W = 38;
+  const W = 41;
   const g = [];
   for (let y = 0; y < LH; y++) g.push(new Array(W).fill('.'));
   for (let x = 0; x < W; x++) { g[0][x] = '#'; g[LH - 1][x] = '#'; g[LH - 2][x] = '#'; }
@@ -229,6 +229,6 @@ function makeHub() {
   LAND_FORMS.forEach((f, i) => L.ents.push({ type: 'statue', form: f, x: (7 + i * 3) * TILE, y: floorY }));
   WATER_FORMS.forEach((f, i) => L.ents.push({ type: 'statue', form: f, x: (26 + i * 3) * TILE, y: floorY }));
   L.ents.push({ type: 'sign', x: 14.5 * TILE, y: 3 * TILE, text: 'KARA HAYVANLARI' });
-  L.ents.push({ type: 'sign', x: 30.5 * TILE, y: 3 * TILE, text: 'SU HAYVANLARI' });
+  L.ents.push({ type: 'sign', x: 32 * TILE, y: 3 * TILE, text: 'SU HAYVANLARI' });
   return L;
 }

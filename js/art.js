@@ -205,6 +205,20 @@ function drawSwimmer(ctx, f, o) {
       ctx.fill();
       break;
     }
+    case 'orka': {
+      ctx.save(); ctx.translate(-26, 0); ctx.rotate(wig * 0.3);
+      tri(ctx, 0, 0, -13, -10, -13, 10, '#15151c'); ctx.restore();
+      tri(ctx, -8, -9, 6, -9, -4, -32, '#15151c');        // uzun sırt yüzgeci
+      ell(ctx, 0, 0, 28, 12, '#1d1d26');
+      ell(ctx, -10, -9, 9, 3, '#6e6e7c');                 // yüzgeç arkasındaki gri leke
+      ell(ctx, 6, 6, 21, 5, '#f4f4f4');                    // beyaz karın
+      ell(ctx, 15, -4, 6, 3.2, '#f4f4f4');                 // gözün arkasındaki beyaz leke
+      circ(ctx, 21, -1, 2, '#000');
+      ell(ctx, 2, 10, 7, 3, '#15151c');                    // yan yüzgeç
+      ctx.strokeStyle = '#555'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(22, 2, 5, 0.3, 1.4); ctx.stroke();
+      break;
+    }
   }
   ctx.restore();
 }

@@ -31,10 +31,10 @@ const SOLID = { '#': true, 'C': true, '*': true };
 
 // ---------- Karakterler ----------
 const LAND_FORMS = ['goril', 'maymun', 'panter', 'kurbaga', 'insan', 'inek'];
-const WATER_FORMS = ['yunus', 'balik', 'ahtapot', 'kopekbaligi'];
+const WATER_FORMS = ['yunus', 'balik', 'ahtapot', 'kopekbaligi', 'orka'];
 const FORM_NAMES = {
   goril: 'Goril', maymun: 'Maymun', panter: 'Panter', kurbaga: 'Kurbağa', insan: 'İnsan', inek: 'İnek',
-  yunus: 'Yunus', balik: 'Balık', ahtapot: 'Ahtapot', kopekbaligi: 'Köpekbalığı',
+  yunus: 'Yunus', balik: 'Balık', ahtapot: 'Ahtapot', kopekbaligi: 'Köpekbalığı', orka: 'Orka',
 };
 const isWaterForm = (f) => WATER_FORMS.includes(f);
 

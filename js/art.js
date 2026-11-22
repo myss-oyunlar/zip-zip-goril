@@ -457,7 +457,7 @@ function drawTile(ctx, L, th, c, tx, ty, t) {
   const above = ty > 0 ? L.g[ty - 1][tx] : '#';
   const below = ty < L.h - 1 ? L.g[ty + 1][tx] : '#';
   switch (c) {
-    case '#': drawGround(ctx, th, x, y, tx, ty, !isGroundC(above), !isGroundC(below) && below !== 'p'); break;
+    case '#': drawGround(ctx, th, x, y, tx, ty, !isGroundC(above) && above !== 'p',!isGroundC(below) && below !== 'p'); break;
     case 'C':
       ctx.fillStyle = th.topHi === '#ffffff' ? '#c9d6e6' : th.dark; ctx.fillRect(x, y, TILE, TILE);
       ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.fillRect(x + 3, y + 3, TILE - 6, TILE - 6);

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1b1b2f">
+<title>Zıpzıp Goril</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<!-- Dokunmatik kontroller: sadece dokunmatik ekranda ve bölüm içindeyken görünür -->
+<div id="touch">
+  <div id="stick"><div id="stick-base"><div id="stick-knob"></div></div></div>
+  <button class="tbtn" id="btn-power" data-act="power">⚡</button>
+  <button class="tbtn" id="btn-attack" data-act="attack">👊</button>
+  <button class="tbtn" id="btn-jump" data-act="jump">⤒</button>
+</div>
+
+<div id="rotate"><div class="phone">📱</div><div>Telefonu yan çevir</div></div>
+
+<script src="js/themes.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/input.js"></script>
+<script src="js/levelgen.js"></script>
+<script src="js/art.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>

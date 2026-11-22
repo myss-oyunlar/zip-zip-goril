@@ -386,9 +386,12 @@ function stepPlayer(h) {
       const uy = I.held.jump ? -1 : iy;
       p.vx = approach(p.vx, ix * max, acc * h);
       p.vy = approach(p.vy, uy * max, acc * h);
-      if (headClear && p.vy < 0) { // su hayvanı karaya çıkamaz; ama zıplayarak sudan fırlayabilir
-        if (p.jumpBuf > 0) { p.vy = -680; p.jumpBuf = 0; Sound.sfx.splash(); }
-        else p.vy = 0;
+      if (headClear && p.vy < 0) { // su hayvanı karaya çıkamaz; yukarı basılıyken yüzeye gelince yunus gibi fırlar
+        if (uy < 0) {
+          p.vy = -760; p.jumpBuf = 0;
+          burst(p.x, p.y - p.h / 2, 'rgba(200,235,255,0.9)', 10, 160);
+          Sound.sfx.splash();
+        } else p.vy = 0;
       }
     } else {
       // kara hayvanları suda hantal

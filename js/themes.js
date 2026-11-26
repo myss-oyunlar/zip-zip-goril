@@ -52,6 +52,15 @@ const POWERS = {
   speed:  { icon: '⚡', name: 'Süper Hız',       help: 'Daha hızlı koşarsın' },
 };
 
+// Bir temanın gücü o temanın 10. bölümünde gelir ve sonraki temalarda da çalışır; önceki temalarda çalışmaz.
+// Güç kayıtta tutulmaz, her bölümde (tema, bölüm) numarasından hesaplanır.
+function powersFor(t, i) {
+  const s = new Set();
+  for (let k = 1; k < t; k++) s.add(THEMES[k].power);
+  if (t > 0 && i === 9) s.add(THEMES[t].power);
+  return s;
+}
+
 // ---------- Temalar (0 = karakter dünyası) ----------
 const THEMES = [
   { name: 'Karakter Dünyası', icon: '🎭', sky: ['#ff9fd8', '#ffe9a8'], ground: '#a0683a', dark: '#7c4f2a', top: '#ff6fb5', topHi: '#ffb3dc',

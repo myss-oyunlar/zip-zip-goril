@@ -42,8 +42,11 @@ function generateLevel(t, idx) {
   flatRun(7);
   L.start = { x: 2.5 * TILE, y: T(gh) * TILE };
 
+  // Güç isteyen parçalar sadece o güç bu bölümde çalışıyorsa çıkar.
+  const SEG_NEEDS = { vine: 'climb', cracked: 'pound' };
+  const powers = powersFor(t, idx);
   const weights = th.seg;
-  const keys = Object.keys(weights);
+  const keys = Object.keys(weights).filter((k) => !SEG_NEEDS[k] || powers.has(SEG_NEEDS[k]));
   const total = keys.reduce((s, k) => s + weights[k], 0);
   const pick = () => { let r = rng() * total; for (const k of keys) { r -= weights[k]; if (r <= 0) return k; } return keys[0]; };
 

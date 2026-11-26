@@ -24,12 +24,12 @@ const toLogical = (cx, cy) => ({ x: (cx * DPR) / SCALE, y: (cy * DPR) / SCALE })
 // ---------- Kayıt (tarayıcıda saklanır) ----------
 const SAVE_KEY = 'zipzip-goril-v1';
 function defaultSave() {
-  return { done: {}, best: {}, powers: [], land: 'goril', water: 'yunus', node: 0, muted: false };
+  return { done: {}, best: {}, land: 'goril', water: 'yunus', node: 0, muted: false };
 }
 function loadSave() {
   try {
     const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
-    if (s) return Object.assign(defaultSave(), s);
+    if (s) { delete s.powers; return Object.assign(defaultSave(), s); }
   } catch (e) { /* kayıt okunamazsa baştan başla */ }
   return defaultSave();
 }
@@ -46,10 +46,11 @@ const G = {
   banner: null, toast: null,
   map: { node: 0, anim: null, camX: 0 },
   pauseSel: 0, cmp: null, hubForm: 'goril', musicTheme: -1,
+  powers: new Set(), // şu an oynanan bölümde çalışan güçler
 };
 Sound.setMuted(G.save.muted);
 
-const has = (pw) => G.save.powers.includes(pw);
+const has = (pw) => G.powers.has(pw);
 const maxHearts = () => (has('heart') ? 4 : 3);
 
 function setState(s) {
@@ -117,10 +118,17 @@ let MAP_W = 0;
 })();
 
 const levelKey = (t, i) => t + '-' + i;
+// Bir tema, önceki temanın 10 bölümü de bitince açılır.
+function isThemeUnlocked(t) {
+  if (t <= 1) return true;
+  for (let i = 0; i < 10; i++) if (!G.save.done[levelKey(t - 1, i)]) return false;
+  return true;
+}
 function isUnlocked(n) {
   const nd = MAP_NODES[n];
   if (!nd) return false;
-  if (nd.t === 0 || nd.i === 0) return true;
+  if (nd.t === 0) return true;
+  if (nd.i === 0) return isThemeUnlocked(nd.t);
   return !!G.save.done[levelKey(nd.t, nd.i - 1)];
 }
 const isDone = (n) => { const nd = MAP_NODES[n]; return nd.t > 0 && !!G.save.done[levelKey(nd.t, nd.i)]; };
@@ -143,6 +151,7 @@ function mapJumpTheme(d) {
   const cur = MAP_NODES[G.map.node].t;
   const nt = clamp(cur + d, 0, 10);
   if (nt === cur) return;
+  if (!isThemeUnlocked(nt)) { showToast('🔒 Önce bu temanın 10 bölümünü bitir'); return; }
   let target = 0;
   if (nt > 0) {
     target = nodeIndex(nt, 0);
@@ -161,6 +170,12 @@ function enterNode(n) {
 }
 
 function goToMap() {
+  // Eski bir kayıtta kilitli bir bölümde duruyorsak, açık olan en son bölüme geç.
+  if (!isUnlocked(G.save.node)) {
+    let n = MAP_NODES.length - 1;
+    while (n > 0 && !isUnlocked(n)) n--;
+    G.save.node = n;
+  }
   G.map.node = G.save.node;
   G.map.anim = null;
   G.map.camX = clamp(MAP_NODES[G.map.node].x - VW / 2, 0, Math.max(0, MAP_W - VW));
@@ -201,7 +216,7 @@ function mapClick(l) {
       else if (isUnlocked(n)) {
         const dist = Math.abs(nd.x - MAP_NODES[G.map.node].x);
         mapMoveTo(n, Math.min(0.9, 0.2 + dist / 2500), Math.min(160, 14 + dist / 10));
-      } else showToast('🔒 Önce önceki bölümü bitir');
+      } else showToast(nd.i === 0 ? '🔒 Önce önceki temanın 10 bölümünü bitir' : '🔒 Önce önceki bölümü bitir');
       return;
     }
   }
@@ -222,6 +237,7 @@ function makePlayer(x, y) {
 function startLevel(t, i) {
   const L = generateLevel(t, i);
   G.level = L;
+  G.powers = powersFor(t, i);
   G.lv = { t, i, bananas: 0, total: L.ents.filter((e) => e.type === 'banana').length, respawn: { x: L.start.x, y: L.start.y }, dead: 0, near: null };
   G.p = makePlayer(L.start.x, L.start.y);
   G.parts = []; G.projs = []; G.shake = 0; G.fade = 1;
@@ -231,10 +247,7 @@ function startLevel(t, i) {
   G.camX = camTarget();
 
   const pw = THEMES[t].power;
-  if (pw && !has(pw)) {
-    G.save.powers.push(pw);
-    persist();
-    G.p.hearts = maxHearts();
+  if (pw && i === 9) { // temanın son bölümü: gücün geldiği yer
     showBanner('YENİ GÜÇ: ' + POWERS[pw].icon + ' ' + POWERS[pw].name, POWERS[pw].help, 5);
     setTimeout(() => Sound.sfx.power(), 300);
   } else if (L.hub) {
@@ -1005,7 +1018,7 @@ function drawHUD() {
   ctx.save(); rrect(ctx, 14, 104, 56, 56, 12); ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fill(); ctx.restore();
   drawCreature(ctx, p.form, 42, 150, { facing: 1, t: G.time, s: 0.75 });
   ctx.font = `22px ${FONT}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-  G.save.powers.forEach((pw, i) => ctx.fillText(POWERS[pw].icon, 80 + i * 28, 132));
+  [...G.powers].forEach((pw, i) => ctx.fillText(POWERS[pw].icon, 80 + i * 28, 132));
 
   uiButton('pause', VW - 66, 12, 52, 52, 'II', { size: 24 });
   uiButton('mute', VW - 126, 12, 52, 52, Sound.muted ? '🔇' : '🔊', { size: 22 });
@@ -1103,10 +1116,11 @@ function drawMap() {
     const nd = MAP_NODES[nodeIndex(z, 0)];
     if (nd.x < cam - 300 || nd.x > cam + VW + 300) continue;
     const th = THEMES[z], pw = POWERS[th.power];
+    const open = isThemeUnlocked(z);
     ctx.save();
     rrect(ctx, nd.x - 30, 24, 250, 66, 14); ctx.fillStyle = 'rgba(30,20,10,0.65)'; ctx.fill();
-    text(`${z}. ${th.icon} ${th.name}`, nd.x - 16, 46, 24, '#ffd83a', 'left', false);
-    text(`${pw.icon} ${pw.name}${has(th.power) ? ' ✓' : ''}`, nd.x - 16, 72, 17, '#fff', 'left', false);
+    text(`${z}. ${open ? th.icon : '🔒'} ${th.name}`, nd.x - 16, 46, 24, open ? '#ffd83a' : '#bbb', 'left', false);
+    text(`${pw.icon} ${pw.name} · 10. bölümde${isUnlocked(nodeIndex(z, 9)) ? ' ✓' : ''}`, nd.x - 16, 72, 17, '#fff', 'left', false);
     ctx.restore();
   }
   // düğümler

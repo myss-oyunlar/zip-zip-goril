@@ -3,7 +3,7 @@
 // Tüm giriş türlerini (klavye, fare, oyun kolu, dokunmatik) tek bir eylem listesinde birleştirir.
 // Oyun sadece Input.held / Input.pressed / Input.released'a bakar.
 const Input = (() => {
-  const ACTIONS = ['left', 'right', 'up', 'down', 'jump', 'attack', 'power', 'pause', 'prevTheme', 'nextTheme', 'confirm', 'mute'];
+  const ACTIONS = ['left', 'right', 'up', 'down', 'jump', 'attack', 'power', 'pause', 'prevTheme', 'nextTheme', 'confirm', 'mute', 'character'];
   const held = {}, pressed = {}, released = {}, prev = {};
   const kb = {}, pad = {}, touch = {}, mouse = {};
   // Aynı kare içinde basılıp bırakılan tuşlar da en az bir kare "basılı" sayılsın.
@@ -25,6 +25,7 @@ const Input = (() => {
     KeyE: 'nextTheme', PageDown: 'nextTheme',
     Enter: 'confirm', NumpadEnter: 'confirm',
     KeyM: 'mute',
+    KeyT: 'character',
   };
 
   function setTouchMode(on) {
@@ -52,7 +53,7 @@ const Input = (() => {
   // ---------- Oyun kolu (PS5 DualSense, Xbox vb. - tarayıcının "standart" eşlemesi) ----------
   //  ✕ (0) zıpla   ○ (1) güç   □ (2) yumruk   △ (3) güç
   //  L1/R1 (4/5) tema değiştir (haritada)   L2 (6) yumruk  R2 (7) güç
-  //  Options (9) duraklat   Yön tuşları (12-15) ve sol çubuk hareket
+  //  Create (8) karakter seçimi   Options (9) duraklat   Yön tuşları (12-15) ve sol çubuk hareket
   function pollPad() {
     for (const k in pad) pad[k] = false;
     const pads = navigator.getGamepads ? navigator.getGamepads() : [];
@@ -68,6 +69,7 @@ const Input = (() => {
       if (b(0)) pad.jump = true;
       if (b(2) || b(6)) pad.attack = true;
       if (b(1) || b(3) || b(7)) pad.power = true;
+      if (b(8)) pad.character = true;
       if (b(9)) pad.pause = true;
       if (b(4)) pad.prevTheme = true;
       if (b(5)) pad.nextTheme = true;

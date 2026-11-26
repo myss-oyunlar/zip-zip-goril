@@ -131,6 +131,12 @@ function isUnlocked(n) {
   if (nd.i === 0) return isThemeUnlocked(nd.t);
   return !!G.save.done[levelKey(nd.t, nd.i - 1)];
 }
+// Kazanılan güçler: gücün geldiği 10. bölüme ulaşılmış temaların güçleri. Karakter Dünyası'nda hepsi çalışır.
+function earnedPowers() {
+  const s = new Set();
+  for (let t = 1; t <= 10; t++) if (isUnlocked(nodeIndex(t, 9))) s.add(THEMES[t].power);
+  return s;
+}
 const isDone = (n) => { const nd = MAP_NODES[n]; return nd.t > 0 && !!G.save.done[levelKey(nd.t, nd.i)]; };
 
 function mapPlayerPos() {
@@ -169,7 +175,20 @@ function enterNode(n) {
   startLevel(nd.t, nd.i);
 }
 
+// Karakter Dünyası'na haritadan ya da bir bölümün içinden girilir.
+// Bölümden girildiyse kapı aynı bölüme geri götürür.
+function openCharacters() {
+  G.returnTo = G.state === 'level' || G.state === 'pause' ? (G.level.hub ? G.returnTo : { t: G.lv.t, i: G.lv.i }) : null;
+  startLevel(0, 0);
+}
+
+function leaveCharacters() {
+  const r = G.returnTo;
+  if (r) startLevel(r.t, r.i); else goToMap();
+}
+
 function goToMap() {
+  G.returnTo = null;
   // Eski bir kayıtta kilitli bir bölümde duruyorsak, açık olan en son bölüme geç.
   if (!isUnlocked(G.save.node)) {
     let n = MAP_NODES.length - 1;
@@ -201,6 +220,7 @@ function updateMap(dt) {
     else if (I.pressed.down || I.pressed.prevTheme) mapJumpTheme(-1);
     else if (I.pressed.jump || I.pressed.confirm || I.pressed.attack) enterNode(M.node);
     else if (I.pressed.pause) { setState('title'); }
+    else if (I.pressed.character) openCharacters();
   }
   const pos = mapPlayerPos();
   const target = clamp(pos.x - VW / 2, 0, Math.max(0, MAP_W - VW));
@@ -237,7 +257,7 @@ function makePlayer(x, y) {
 function startLevel(t, i) {
   const L = generateLevel(t, i);
   G.level = L;
-  G.powers = powersFor(t, i);
+  G.powers = t === 0 ? earnedPowers() : powersFor(t, i);
   G.lv = { t, i, bananas: 0, total: L.ents.filter((e) => e.type === 'banana').length, respawn: { x: L.start.x, y: L.start.y }, dead: 0, near: null };
   G.p = makePlayer(L.start.x, L.start.y);
   G.parts = []; G.projs = []; G.shake = 0; G.fade = 1;
@@ -660,7 +680,7 @@ function stepEnt(e, h) {
       if (alive && Math.abs(p.x - e.x) < 36 && p.y > e.y - 120 && p.y <= e.y + 10) completeLevel();
       return;
     case 'door':
-      if (alive && Math.abs(p.x - e.x) < 26 && p.y > e.y - 80) goToMap();
+      if (alive && Math.abs(p.x - e.x) < 26 && p.y > e.y - 80) leaveCharacters();
       return;
     case 'statue': {
       const near = Math.abs(p.x - e.x) < 36 && p.y - e.y > -110 && p.y - e.y < 20;
@@ -715,6 +735,7 @@ function camTarget() {
 
 function updateLevel(dt) {
   if (Input.pressed.pause) { setState('pause'); G.pauseSel = 0; return; }
+  if (Input.pressed.character && !G.level.hub) { openCharacters(); return; }
   const steps = Math.max(1, Math.ceil(dt / (1 / 120)));
   const h = dt / steps;
   for (let i = 0; i < steps; i++) {
@@ -763,6 +784,7 @@ function onButton(id) {
     case 'resume': setState('level'); break;
     case 'restart': startLevel(G.lv.t, G.lv.i); break;
     case 'tomap': goToMap(); break;
+    case 'chars': openCharacters(); break;
     case 'mute': toggleMute(); break;
     case 'prevT': if (!G.map.anim) mapJumpTheme(-1); break;
     case 'nextT': if (!G.map.anim) mapJumpTheme(1); break;
@@ -943,7 +965,7 @@ function drawLevel() {
       case 'enemy': if (e.alive || e.deadT > 0) drawEnemy(ctx, e, th, t); break;
       case 'cp': drawCheckpoint(ctx, e, t); break;
       case 'goal': drawGoal(ctx, e.x, e.y, t); break;
-      case 'door': drawDoor(ctx, e); break;
+      case 'door': drawDoor(ctx, e, G.returnTo ? 'BÖLÜME DÖN' : 'HARİTA'); break;
       case 'npc': drawNPC(ctx, e, t); break;
       case 'statue': drawStatue(ctx, e, t, G.hubForm === e.form); break;
       case 'sign': text(e.text, e.x, e.y, 26, '#fff', 'center'); break;
@@ -1022,6 +1044,7 @@ function drawHUD() {
 
   uiButton('pause', VW - 66, 12, 52, 52, 'II', { size: 24 });
   uiButton('mute', VW - 126, 12, 52, 52, Sound.muted ? '🔇' : '🔊', { size: 22 });
+  if (!L.hub) uiButton('chars', VW - 186, 12, 52, 52, '🎭', { size: 24 });
 }
 
 function drawPause() {
@@ -1069,8 +1092,8 @@ function drawTitle() {
   const doneCount = Object.keys(G.save.done).length;
   if (doneCount) text(`⭐ ${doneCount} / 100 bölüm`, VW / 2, 345, 22, '#fff', 'center');
   const help = [
-    '⌨️  ←→ yürü · Boşluk zıpla · X yumruk · C güç · Esc duraklat',
-    '🎮  ✕ zıpla · □ yumruk · ○ güç · Options duraklat',
+    '⌨️  ←→ yürü · Boşluk zıpla · X yumruk · C güç · T karakter · Esc duraklat',
+    '🎮  ✕ zıpla · □ yumruk · ○ güç · Create karakter · Options duraklat',
     '📱  Sol: kaydırarak yürü · Sağ: tuşlar',
   ];
   help.forEach((h, i) => text(h, 20, VH - 120 + i * 26, 17, '#fff', 'left'));
@@ -1152,6 +1175,7 @@ function drawMap() {
   uiButton('play', VW / 2 - 100, VH - 84, 200, 70, '▶ OYNA', { size: 30, color: 'rgba(230,80,60,0.95)' });
   uiButton('fs', VW - 66, 12, 52, 52, '⛶', { size: 26 });
   uiButton('mute', VW - 126, 12, 52, 52, Sound.muted ? '🔇' : '🔊', { size: 22 });
+  uiButton('chars', VW - 186, 12, 52, 52, '🎭', { size: 24 });
   const doneCount = Object.keys(G.save.done).length;
   text(`⭐ ${doneCount} / 100`, 20, 36, 24, '#fff');
   if (!Input.touchMode) text('←→ yürü · ↑↓ / Q E / L1 R1 tema atla · Boşluk / ✕ gir', 20, VH - 178, 15, '#fff');

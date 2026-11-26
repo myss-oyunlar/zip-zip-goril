@@ -419,13 +419,13 @@ function drawCheckpoint(ctx, cp, t) {
   ctx.restore();
 }
 
-function drawDoor(ctx, d) {
+function drawDoor(ctx, d, label) {
   ctx.save(); ctx.translate(d.x, d.y);
   ctx.fillStyle = '#5a3a1e'; rrect(ctx, -22, -80, 44, 80, [22, 22, 0, 0]); ctx.fill();
   ctx.fillStyle = '#8a5a2e'; rrect(ctx, -17, -74, 34, 74, [17, 17, 0, 0]); ctx.fill();
   circ(ctx, 9, -36, 3, '#ffd83a');
   ctx.font = 'bold 13px system-ui'; ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
-  ctx.fillText('HARİTA', 0, -88);
+  ctx.fillText(label, 0, -88);
   ctx.restore();
 }
 
